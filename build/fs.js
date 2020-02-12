@@ -2,25 +2,29 @@
 
 const fs = require ('fs')
     , path = require ('path')
+const util = require('util');
+const readFileAsync = util.promisify(fs.readFile);
+const writeFileAsync = util.promisify(fs.writeFile);
 
-function replaceInFile (filename, regex, replacement) {
-    const contents = fs.readFileSync (filename, 'utf8')
+
+async function replaceInFile (filename, regex, replacement) {
+    const contents = await readFileAsync (filename, 'utf8')
     const newContents = contents.replace (regex, replacement)
     fs.truncateSync (filename)
-    fs.writeFileSync (filename, newContents)
+    await writeFileAsync (filename, newContents)
 }
 
-function copyFile (oldName, newName) {
-    const contents = fs.readFileSync (oldName, 'utf8')
+async function copyFile (oldName, newName) {
+    const contents = await readFileAsync (oldName, 'utf8')
     fs.truncateSync (newName)
-    fs.writeFileSync (newName, contents)
+    await writeFileAsync (newName, contents)
 }
 
-function overwriteFile (filename, contents) {
+async function overwriteFile (filename, contents) {
     // log.cyan ('Overwriting → ' + filename.yellow)
     fs.closeSync (fs.openSync (filename, 'a'));
     fs.truncateSync (filename)
-    fs.writeFileSync (filename, contents)
+    await writeFileAsync (filename, contents)
 }
 
 function createFolder (folder) {

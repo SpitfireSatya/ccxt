@@ -14,7 +14,10 @@ const fs = require ('fs')
         createFolderRecursively,
         replaceInFile,
         overwriteFile,
-    } = require ('./fs.js')
+    } = require ('./fs.js');
+const util = require('util');
+const readFileAsync = util.promisify(fs.readFile);
+const writeFileAsync = util.promisify(fs.writeFile);
 
 class Transpiler {
 
@@ -709,10 +712,10 @@ class Transpiler {
 
     //-----------------------------------------------------------------------------
 
-    transpilePythonAsyncToSync (oldName, newName) {
+    async transpilePythonAsyncToSync (oldName, newName) {
 
         log.magenta ('Transpiling ' + oldName.yellow + ' → ' + newName.yellow)
-        const fileContents = fs.readFileSync (oldName, 'utf8')
+        const fileContents = await readFileAsync (oldName, 'utf8')
         let lines = fileContents.split ("\n")
 
         lines = lines.filter (line => ![ 'import asyncio' ].includes (line))
@@ -743,7 +746,7 @@ class Transpiler {
         newContents = deleteFunction ('test_l2_order_books_async', newContents)
 
         fs.truncateSync (newName)
-        fs.writeFileSync (newName, newContents)
+        await writeFileAsync (newName, newContents)
     }
 
     // ------------------------------------------------------------------------
@@ -859,14 +862,14 @@ class Transpiler {
 
     // ========================================================================
 
-    transpileDerivedExchangeFile (jsFolder, filename, options) {
+    async transpileDerivedExchangeFile (jsFolder, filename, options) {
 
         // todo normalize jsFolder and other arguments
 
         try {
 
             const { python2Folder, python3Folder, phpFolder } = options
-            const contents = fs.readFileSync (jsFolder + filename, 'utf8')
+            const contents = await readFileAsync (jsFolder + filename, 'utf8')
             const { python2, python3, php, className, baseClass } = this.transpileDerivedExchangeClass (contents)
 
             log.cyan ('Transpiling from', filename.yellow)
@@ -957,12 +960,12 @@ class Transpiler {
 
     // ========================================================================
 
-    transpileErrorHierarchy () {
+    async transpileErrorHierarchy () {
 
         const errorHierarchyFilename = './js/base/errorHierarchy.js'
         const errorHierarchy = require ('.' + errorHierarchyFilename)
 
-        let js = fs.readFileSync (errorHierarchyFilename, 'utf8')
+        let js = await readFileAsync (errorHierarchyFilename, 'utf8')
 
         js = this.regexAll (js, [
             [ /module\.exports = [^\;]+\;\n/s, '' ],
@@ -1000,14 +1003,14 @@ class Transpiler {
 
     //-----------------------------------------------------------------------------
 
-    transpileDateTimeTests () {
+    async transpileDateTimeTests () {
         const jsFile = './js/test/base/functions/test.datetime.js'
         const pyFile = './python/test/test_exchange_datetime_functions.py'
         const phpFile = './php/test/test_exchange_datetime_functions.php'
 
         log.magenta ('Transpiling from', jsFile.yellow)
 
-        let js = fs.readFileSync (jsFile).toString ()
+        let js = await readFileAsync (jsFile).toString ()
 
         js = this.regexAll (js, [
             [ /[^\n]+require[^\n]+\n/g, '' ],
@@ -1040,7 +1043,7 @@ class Transpiler {
 
     //-------------------------------------------------------------------------
 
-    transpilePrecisionTests () {
+    async transpilePrecisionTests () {
 
         const jsFile = './js/test/base/functions/test.number.js'
         const pyFile = './python/test/test_decimal_to_precision.py'
@@ -1048,7 +1051,7 @@ class Transpiler {
 
         log.magenta ('Transpiling from', jsFile.yellow)
 
-        let js = fs.readFileSync (jsFile).toString ()
+        let js = await readFileAsync (jsFile).toString ()
 
         js = this.regexAll (js, [
             [ /\'use strict\';?\s+/g, '' ],
@@ -1116,7 +1119,7 @@ class Transpiler {
         const phpFile = './php/test/test_crypto.php'
 
         log.magenta ('Transpiling from', jsFile.yellow)
-        let js = fs.readFileSync (jsFile).toString ()
+        let js = await readFileAsync (jsFile).toString ()
 
         js = this.regexAll (js, [
             [ /\'use strict\';?\s+/g, '' ],

@@ -4,79 +4,86 @@
 //      npm run update-badges
 // ---------------------------------------------------------------------------
 
-"use strict";
+(async function(){
 
-const fs = require ('fs')
-const ccxt = require ('../ccxt')
-const log  = require ('ololog')
-const ansi = require ('ansicolor').nice
+    "use strict";
 
-//-----------------------------------------------------------------------------
+    const fs = require ('fs')
+    const ccxt = require ('../ccxt')
+    const log  = require ('ololog')
+    const ansi = require ('ansicolor').nice
+    const util = require('util');
+    const readFileAsync = util.promisify(fs.readFile);
+    const writeFileAsync = util.promisify(fs.writeFile);
 
-let readmeRst = './python/README.rst'
+    //-----------------------------------------------------------------------------
 
-log.bright.cyan ('Preparing for PyPI →', readmeRst.yellow)
+    let readmeRst = './python/README.rst'
 
-let rst = fs.readFileSync (readmeRst, 'utf8')
-let rstNew = rst.replace (/\`([^\`]+)\s\<\#[^\`]+\>\`\_\_/g, '$1') // PyPI doesn't like urls containing anchor hash symbol '#', strip it off to plain text
-                .replace (/\\\|/g, '|')                    // PyPI doesn't like escaped vertical bars
-                .replace (/\\\_/g, ' _')                   // PyPI doesn't like escaped underscores
-                .replace (/\|(\_[^\|]+)\|([\ ]+)\|/g, '|$1| $2|')
-                // .replace (/\|\\(\_[^\|]+)\|/g, '|$1|')
+    log.bright.cyan ('Preparing for PyPI →', readmeRst.yellow)
 
-let rstExchangeTableRegex = /([\s\S]+?)APIs:(?:(?:[\r][\n]){2}|[\n]{2})(\+\-\-[\s\S]+\-\-\+)(?:(?:[\r][\n]){2}|[\n]{2})([\s\S]+)/
-let match = rstExchangeTableRegex.exec (rstNew)
+    let rst = await readFileAsync (readmeRst, 'utf8')
+    let rstNew = rst.replace (/\`([^\`]+)\s\<\#[^\`]+\>\`\_\_/g, '$1') // PyPI doesn't like urls containing anchor hash symbol '#', strip it off to plain text
+                    .replace (/\\\|/g, '|')                    // PyPI doesn't like escaped vertical bars
+                    .replace (/\\\_/g, ' _')                   // PyPI doesn't like escaped underscores
+                    .replace (/\|(\_[^\|]+)\|([\ ]+)\|/g, '|$1| $2|')
+                    // .replace (/\|\\(\_[^\|]+)\|/g, '|$1|')
 
-let rstExchangeTableLines = match[2].split ("\n")
+    let rstExchangeTableRegex = /([\s\S]+?)APIs:(?:(?:[\r][\n]){2}|[\n]{2})(\+\-\-[\s\S]+\-\-\+)(?:(?:[\r][\n]){2}|[\n]{2})([\s\S]+)/
+    let match = rstExchangeTableRegex.exec (rstNew)
 
-let newRstExchangeTable = rstExchangeTableLines.map (line => {
-    return line.replace (/(\||\+)(.).+?(\s|\=|\-)(\||\+)/, '$1') // replace ascii table graphics
-}).join ("\n")
+    let rstExchangeTableLines = match[2].split ("\n")
 
-rstNew = match[1] + "APIs:\n\n" + newRstExchangeTable + "\n\n" + match[3]
+    let newRstExchangeTable = rstExchangeTableLines.map (line => {
+        return line.replace (/(\||\+)(.).+?(\s|\=|\-)(\||\+)/, '$1') // replace ascii table graphics
+    }).join ("\n")
 
-fs.truncateSync (readmeRst)
-fs.writeFileSync (readmeRst, rstNew)
+    rstNew = match[1] + "APIs:\n\n" + newRstExchangeTable + "\n\n" + match[3]
 
-//-----------------------------------------------------------------------------
+    fs.truncateSync (readmeRst)
+    await writeFileAsync (readmeRst, rstNew)
 
-;([
-    './doc/README.rst',
-    './doc/manual.rst',
-    './doc/install.rst',
-    './doc/exchanges.rst',
-    './doc/exchanges-by-country.rst',
+    //-----------------------------------------------------------------------------
 
-]).forEach (file => {
+    ;([
+        './doc/README.rst',
+        './doc/manual.rst',
+        './doc/install.rst',
+        './doc/exchanges.rst',
+        './doc/exchanges-by-country.rst',
 
-    let rst = fs.readFileSync (file, 'utf8')
-    let rstNew = rst.replace (/\|\\(\_[^\s]+)\|\s+image/g, '|$1| image')
-                    .replace (/\|\\(\_[^\s]+)\|/g, '|$1| ')
-                    .replace (/\\(\_1broker|\_1btcxe)/g, '$1 ')
-    fs.truncateSync (file)
-    fs.writeFileSync (file, rstNew)
+    ]).forEach (async file => {
 
-})
+        let rst = await readFileAsync (file, 'utf8')
+        let rstNew = rst.replace (/\|\\(\_[^\s]+)\|\s+image/g, '|$1| image')
+                        .replace (/\|\\(\_[^\s]+)\|/g, '|$1| ')
+                        .replace (/\\(\_1broker|\_1btcxe)/g, '$1 ')
+        fs.truncateSync (file)
+        await writeFileAsync (file, rstNew)
 
-//-----------------------------------------------------------------------------
+    })
 
-function updateExchangeCount (fileName) {
+    //-----------------------------------------------------------------------------
 
-    log.bright.cyan ('Updating exchange count →', fileName.yellow)
+    async function updateExchangeCount (fileName) {
 
-    let oldContent = fs.readFileSync (fileName, 'utf8')
-    let newContent =
-        oldContent.replace (/shields\.io\/badge\/exchanges\-[0-9a-z]+\-blue/g, 'shields.io/badge/exchanges-' + ccxt.exchanges.length + '-blue')
+        log.bright.cyan ('Updating exchange count →', fileName.yellow)
+
+        let oldContent = await readFileAsync (fileName, 'utf8')
+        let newContent =
+            oldContent.replace (/shields\.io\/badge\/exchanges\-[0-9a-z]+\-blue/g, 'shields.io/badge/exchanges-' + ccxt.exchanges.length + '-blue')
 
 
-    fs.truncateSync (fileName)
-    fs.writeFileSync (fileName, newContent)
+        fs.truncateSync (fileName)
+        await writeFileAsync (fileName, newContent)
 
-}
+    }
 
-updateExchangeCount ('./README.md')
-updateExchangeCount (readmeRst)
+    await updateExchangeCount ('./README.md')
+    await updateExchangeCount (readmeRst)
 
-log.bright.green ('Badges updated successfully.')
+    log.bright.green ('Badges updated successfully.')
 
-//-----------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------
+
+}());

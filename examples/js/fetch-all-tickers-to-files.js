@@ -2,7 +2,9 @@
 
 const ccxt = require ('../../ccxt.js')
     , log  = require ('ololog').noLocate // npm install ololog
-    , fs   = require ('fs')
+    , fs   = require ('fs');
+const util = require('util');
+const writeFileAsync = util.promisify(fs.writeFile);
 
     // the numWorkers constant defines the number of concurrent workers
     // those aren't really threads in terms of the async environment
@@ -49,7 +51,7 @@ const ccxt = require ('../../ccxt.js')
                     const filename = exchange.id + '.json'
 
                     // save the response to a file
-                    fs.writeFileSync (filename, JSON.stringify ({ tickers }));
+                    await writeFileAsync (filename, JSON.stringify ({ tickers }));
 
                     // print out a message on success
                     log.green (exchange.id, 'tickers saved to', filename)

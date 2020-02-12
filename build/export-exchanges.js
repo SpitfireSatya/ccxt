@@ -13,7 +13,10 @@ const fs        = require ('fs')
     , log       = require ('ololog').unlimited
     , ansi      = require ('ansicolor').nice
     , { keys, values, entries } = Object
-    , { replaceInFile } = require ('./fs.js')
+    , { replaceInFile } = require ('./fs.js');
+const util = require('util');
+const readFileAsync = util.promisify(fs.readFile);
+const writeFileAsync = util.promisify(fs.writeFile);
 
 // ----------------------------------------------------------------------------
 
@@ -34,9 +37,9 @@ function logExportExchanges (filename, regex, replacement) {
 
 // ----------------------------------------------------------------------------
 
-function getIncludedExchangeIds () {
+async function getIncludedExchangeIds () {
 
-    const includedIds = fs.readFileSync ('exchanges.cfg')
+    const includedIds = (await readFileAsync('exchanges.cfg'))
         .toString () // Buffer → String
         .split ('\n') // String → Array
         .map (line => line.split ('#')[0].trim ()) // trim comments
@@ -93,7 +96,7 @@ function createExchanges (ids) {
 // ----------------------------------------------------------------------------
 // TODO: REWRITE THIS ↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
 
-function exportSupportedAndCertifiedExchanges (exchanges, wikiPath) {
+async function exportSupportedAndCertifiedExchanges (exchanges, wikiPath) {
 
     // ............................................................................
     // markup constants and helper functions
@@ -229,20 +232,20 @@ function exportSupportedAndCertifiedExchanges (exchanges, wikiPath) {
     let result = "# Exchanges By Country\n\nThe ccxt library currently supports the following cryptocurrency exchange markets and trading APIs:\n\n" + lines + "\n\n"
     let filename = wikiPath + '/Exchange-Markets-By-Country.md'
     fs.truncateSync (filename)
-    fs.writeFileSync (filename, result)
+    await writeFileAsync (filename, result)
 }
 
 // TODO: REWRITE THIS ↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑
 // ----------------------------------------------------------------------------
 
-function exportExchangeIdsToExchangesJson (exchanges) {
+async function exportExchangeIdsToExchangesJson (exchanges) {
     log.bright ('Exporting exchange ids to'.cyan, 'exchanges.json'.yellow)
-    fs.writeFileSync ('exchanges.json', JSON.stringify ({ ids: keys (exchanges) }, null, 4))
+    await writeFileAsync ('exchanges.json', JSON.stringify ({ ids: keys (exchanges) }, null, 4))
 }
 
 // ----------------------------------------------------------------------------
 
-function exportWikiToGitHub (wikiPath, gitWikiPath) {
+async function exportWikiToGitHub (wikiPath, gitWikiPath) {
 
     log.bright.cyan ('Exporting wiki to GitHub')
 
@@ -259,18 +262,18 @@ function exportWikiToGitHub (wikiPath, gitWikiPath) {
         const sourcePath = wikiPath + '/' + sourceFile
         const destinationPath = gitWikiPath + '/' + destinationFile
         log.bright.cyan ('Exporting', sourcePath.yellow, '→', destinationPath.yellow)
-        fs.writeFileSync (destinationPath, fs.readFileSync (sourcePath))
+        await writeFileAsync (destinationPath, await readFileAsync (sourcePath))
     }
 }
 
 // ----------------------------------------------------------------------------
 
-function exportKeywordsToPackageJson (exchanges) {
+async function exportKeywordsToPackageJson (exchanges) {
 
     log.bright ('Exporting exchange keywords to'.cyan, 'package.json'.yellow)
 
     // const packageJSON = require ('../package.json')
-    const packageJSON = JSON.parse (fs.readFileSync ('./package.json'))
+    const packageJSON = JSON.parse (await readFileAsync ('./package.json'))
     const keywords = new Set (packageJSON.keywords)
 
     for (const ex of values (exchanges)) {
@@ -281,7 +284,7 @@ function exportKeywordsToPackageJson (exchanges) {
     }
 
     packageJSON.keywords = [...keywords]
-    fs.writeFileSync ('./package.json', JSON.stringify (packageJSON, null, 2))
+    await writeFileAsync ('./package.json', JSON.stringify (packageJSON, null, 2))
 }
 
 // ----------------------------------------------------------------------------

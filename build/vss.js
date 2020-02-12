@@ -10,6 +10,9 @@ const fs           = require ('fs')
 const log          = require ('ololog')
 const ansi         = require ('ansicolor').nice
 const { execSync } = require ('child_process')
+const util = require('util');
+const readFileAsync = util.promisify(fs.readFile);
+const writeFileAsync = util.promisify(fs.writeFile);
 
 //-----------------------------------------------------------------------------
 
@@ -29,13 +32,13 @@ function incrementVersionPatchNumber (version) {
 
 //-----------------------------------------------------------------------------
 
-function vss (filename, template, version) {
+async function vss (filename, template, version) {
     log.bright.cyan ('Single-sourcing version', version, './package.json → ' + filename.yellow)
-    const content = fs.readFileSync (filename, 'utf8')
+    const content = await readFileAsync (filename, 'utf8')
     const regexp  = new RegExp (template.replace (/[-\/\\^$*+?.()|[\]{}]/g, '\\$&') // escape string for use in regexp
                                         .replace ('\\{version\\}', '\\d+\\.\\d+\\.\\d+'), 'g')
     fs.truncateSync  (filename)
-    fs.writeFileSync (filename, content.replace (regexp, template.replace ('{version}', version)))
+    await writeFileAsync (filename, content.replace (regexp, template.replace ('{version}', version)))
 }
 
 // ----------------------------------------------------------------------------
